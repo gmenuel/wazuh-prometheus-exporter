@@ -104,28 +104,31 @@ class WazuhCollector:
             )
 
         yield metric
-        metric = InfoMetricFamily(
-            "last_registered_agent", "Wazuh last registered agent"
-        )
-        for version in agents["last_registered_agent"]:
-            if version["status"] == "never_connected":
-                logging.warning(
-                    f'Last Wazuh agent with name {version["name"]} has status {version["status"]},'
-                    f"last_registered_agent metric has been skipped please check agent."
-                    f"Full agent trace {version}"
-                )
-            else:
-                for key, value in version["os"].items():
-                    node_name = version["node_name"]
-                    node_value = f'{version["node_name"]}-{key}'
-                    prom_node_name_format = node_name.replace("-", "_")
-                    prom_node_value_format = node_value.replace("-", "_")
 
-                    metric.add_metric(
-                        labels=prom_node_name_format,
-                        value={prom_node_value_format: f"{value}"},
+        if not os.getenv("SKIP_LAST_REGISTERED_AGENT"):
+            metric = InfoMetricFamily(
+                "last_registered_agent", "Wazuh last registered agent"
+            )
+            for version in agents["last_registered_agent"]:
+                if version["status"] == "never_connected":
+                    logging.warning(
+                        f'Last Wazuh agent with name {version["name"]} has status {version["status"]},'
+                        f"last_registered_agent metric has been skipped please check agent."
+                        f"Full agent trace {version}"
                     )
-        yield metric
+                else:
+                    for key, value in version["os"].items():
+                        node_name = version["node_name"]
+                        node_value = f'{version["node_name"]}-{key}'
+                        prom_node_name_format = node_name.replace("-", "_")
+                        prom_node_value_format = node_value.replace("-", "_")
+
+                        metric.add_metric(
+                            labels=prom_node_name_format,
+                            value={prom_node_value_format: f"{value}"},
+                        )
+            yield metric
+
         metric = InfoMetricFamily(
             "manager_stats_hourly",
             "Wazuh statistical information per hour. "
@@ -151,11 +154,14 @@ class WazuhCollector:
                         labels=node["info"]["name"], value={f"{key}": f"{value}"}
                     )
             yield metric
-        metric = InfoMetricFamily("wazuh_api", "Wazuh API information")
+
         info = wazuh_connection.wazuh_api_info(auth)
-        for key, value in info.items():
-            metric.add_metric(labels="wazuh_api_version", value={str(key): str(value)})
-        yield metric
+        if not os.getenv("SKIP_WAZUH_API_INFO"):
+            metric = InfoMetricFamily("wazuh_api", "Wazuh API information")
+            for key, value in info.items():
+                metric.add_metric(labels="wazuh_api_version", value={str(key): str(value)})
+            yield metric
+
         metric = Metric(
             "manager_stats_total",
             "Wazuh statistical information for the current date",
@@ -234,15 +240,18 @@ class WazuhCollector:
                 labels={"manager_stats_remote": "dequeued_after_close"},
             )
         yield metric
-        metric = InfoMetricFamily("last_logs", "The last 2000 wazuh log entries")
-        for log in get_logs:
-            metric.add_metric(
-                labels=f'wazuh_last_logs_{log["tag"]}',
-                value={
-                    f'{log["tag"].replace("-", "_").replace(":", "_")}_{log["level"]}': f'{log["description"].strip()}'
-                },
-            )
-        yield metric
+
+        if not os.getenv("SKIP_LAST_LOGS", default = ""):
+            metric = InfoMetricFamily("last_logs", "The last 2000 wazuh log entries")
+            for log in get_logs:
+                metric.add_metric(
+                    labels=f'wazuh_last_logs_{log["tag"]}',
+                    value={
+                        f'{log["tag"].replace("-", "_").replace(":", "_")}_{log["level"]}': f'{log["description"].strip()}'
+                    },
+                )
+            yield metric
+
         metric = Metric(
             "analysisd_stats", "Wazuh analysisd statistical information", "summary"
         )
