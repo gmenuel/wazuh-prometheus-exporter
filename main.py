@@ -145,14 +145,14 @@ class WazuhCollector:
             labels={},
         )
         yield metric
-        metric = InfoMetricFamily("nodes_healthcheck", "Wazuh nodes healthcheck")
+        metric = InfoMetricFamily("nodes_healthcheck", "Wazuh nodes healthcheck", labels=["node_name"])
         nodes = wazuh_connection.wazuh_get_nodes_healtchecks(auth)
         if nodes is not None:
             for node in nodes:
-                for key, value in node["info"].items():
-                    metric.add_metric(
-                        labels=node["info"]["name"], value={f"{key}": f"{value}"}
-                    )
+                infos = { k:str(v) for (k, v) in node["info"].items() if k != "name" and k!= "n_active_agents" }
+                metric.add_metric(
+                    labels=[node["info"]["name"]], value=infos
+                )
             yield metric
 
         info = wazuh_connection.wazuh_api_info(auth)
