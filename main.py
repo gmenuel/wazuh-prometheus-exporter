@@ -64,11 +64,11 @@ class WazuhCollector:
         validate_configuration = wazuh_connection.wazuh_validate_configuration(auth)
         metric = Metric("wazuh_total_agent", "Total Wazuh agents count", "summary")
         for agent in agents["nodes"]:
-            metric.add_sample("wazuh_agents_count", value=agent["count"], labels={})
+            metric.add_sample("wazuh_agents_count", value=agent["count"], labels={"node_name": agent["node_name"]})
         yield metric
         metric = Metric("wazuh_total_group", "Total Wazuh groups count", "summary")
         for group in agents["groups"]:
-            metric.add_sample("wazuh_agents_group", value=group["count"], labels={})
+            metric.add_sample("wazuh_agents_group", value=group["count"], labels={"group_name": group["name"]})
         yield metric
         metric = Metric("wazuh_agent_status", "Total Wazuh agents by status", "summary")
 
