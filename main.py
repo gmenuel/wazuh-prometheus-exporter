@@ -6,7 +6,7 @@ import logging
 import time
 
 from prometheus_client import start_http_server, Metric, REGISTRY
-from prometheus_client.metrics_core import InfoMetricFamily
+from prometheus_client.metrics_core import InfoMetricFamily, GaugeMetricFamily
 
 import wazuh
 
@@ -96,11 +96,11 @@ class WazuhCollector:
         )
         metric.add_sample("wazuh_total_agents", value=agents_path["total"], labels={})
         yield metric
-        metric = InfoMetricFamily("wazuh_agent_version", "Wazuh agent versions")
+        metric = GaugeMetricFamily("wazuh_agent_version", "Wazuh agent versions", labels=["version"])
         for version in agents["agent_version"]:
             metric.add_metric(
-                labels="version",
-                value={"version": version["version"], "count": str(version["count"])},
+                labels=[version["version"]],
+                value=version["count"],
             )
 
         yield metric
